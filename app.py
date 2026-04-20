@@ -11,12 +11,10 @@ st.set_page_config(page_title="球星卡小荷包", page_icon="💳", layout="wi
 # 强制注入全局 CSS，优化字体与排版细节
 st.markdown("""
     <style>
-    /* 强制全局暗黑背景与现代原生字体栈 */
     .stApp {
         background-color: #0E1117 !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
     }
-    /* 标题特效收敛，更加沉稳高级 */
     h1 {
         text-align: center; 
         color: #FF8C00 !important; 
@@ -24,15 +22,9 @@ st.markdown("""
         text-shadow: 0px 2px 8px rgba(255,140,0,0.15);
         margin-bottom: 5px;
     }
-    /* 副标题居中 */
     .subtitle {
-        text-align: center;
-        color: #888888;
-        font-size: 14px;
-        margin-bottom: 30px;
-        letter-spacing: 0.5px;
+        text-align: center; color: #888888; font-size: 14px; margin-bottom: 30px; letter-spacing: 0.5px;
     }
-    /* 数据看板卡片 (精细渐变与柔和阴影) */
     [data-testid="stMetric"] {
         background: linear-gradient(145deg, #1A1C23, #121419) !important;
         border: 1px solid #2A2D35 !important;
@@ -44,58 +36,33 @@ st.markdown("""
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     [data-testid="stMetric"]:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 25px rgba(255, 140, 0, 0.15);
-        border-color: #FF8C00 !important;
+        transform: translateY(-4px); box-shadow: 0 8px 25px rgba(255, 140, 0, 0.15); border-color: #FF8C00 !important;
     }
-    /* 核心修改：数据文字圆润化、清晰化 */
     [data-testid="stMetricValue"] { 
-        justify-content: center; 
-        color: #F8F9FA !important; 
-        font-size: 34px !important;
-        font-weight: 600 !important;
-        /* 移除难看的等宽字体，使用圆润的系统字体 */
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-        letter-spacing: 0.5px;
+        justify-content: center; color: #F8F9FA !important; font-size: 34px !important; font-weight: 600 !important; letter-spacing: 0.5px;
     }
     [data-testid="stMetricLabel"] { 
-        justify-content: center; 
-        color: #A0AEC0 !important; 
-        font-size: 14px !important;
-        font-weight: 500 !important;
+        justify-content: center; color: #A0AEC0 !important; font-size: 14px !important; font-weight: 500 !important;
     }
-    [data-testid="stMetricDelta"] {
-        justify-content: center; 
-    }
-    /* 按钮高级动效 */
+    [data-testid="stMetricDelta"] { justify-content: center; }
+    
     .stButton > button {
         background: linear-gradient(90deg, #FF8C00, #FF6347) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 10px 24px !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.5px !important;
-        transition: all 0.3s ease !important;
-        width: 100%;
+        color: white !important; border: none !important; border-radius: 8px !important;
+        padding: 10px 24px !important; font-weight: 600 !important; letter-spacing: 0.5px !important;
+        transition: all 0.3s ease !important; width: 100%;
     }
     .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3) !important;
+        transform: translateY(-2px) !important; box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3) !important;
     }
-    /* 卡片标题居中与加粗 */
     .card-title {
-        text-align: center;
-        color: #E0E0E0;
-        margin-top: 10px;
-        margin-bottom: 5px;
-        font-weight: 600;
+        text-align: center; color: #E0E0E0; margin-top: 10px; margin-bottom: 5px; font-weight: 600;
     }
-    /* 表单边框柔和化 */
     [data-testid="stForm"] {
-        border-color: #2A2D35 !important;
-        border-radius: 12px !important;
+        border-color: #2A2D35 !important; border-radius: 12px !important;
     }
+    /* 隐藏部分不需要的默认边距 */
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -147,7 +114,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 tabs = st.tabs(["🖼️ 资产画廊与管理", "📝 录入新卡", "💰 资金池管理"])
 
 # ----------------------------------------
-# 页面 1: 资产画廊
+# 页面 1: 资产画廊 (已升级 1:1 图片与全字段修改)
 # ----------------------------------------
 with tabs[0]:
     if not all_cards:
@@ -156,7 +123,13 @@ with tabs[0]:
         cols = st.columns(3)
         for i, card in enumerate(all_cards):
             with cols[i % 3]:
-                st.image(card['image_url'], use_container_width=True)
+                # 核心升级：使用 HTML/CSS 强制实现 1:1 完美正方形裁剪，不变形
+                st.markdown(f"""
+                    <div style="width: 100%; aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 10px; border: 1px solid #333;">
+                        <img src="{card['image_url']}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                    </div>
+                """, unsafe_allow_html=True)
+                
                 st.markdown(f"<h4 class='card-title'>{card['card_name']}</h4>", unsafe_allow_html=True)
                 
                 date_str = card.get('date', '未记录日期')
@@ -170,16 +143,27 @@ with tabs[0]:
                     profit = (card['sell_price'] or 0) - buy_total
                     st.success(f"已售出 · 盈亏: ¥{profit:,.2f}")
                 
-                with st.expander("✏️ 修改状态 / 卖出"):
+                # 核心升级：展开表单支持修改买入价和运费杂费
+                with st.expander("✏️ 编辑详情 / 卖出"):
                     with st.form(f"edit_{card['id']}"):
                         new_status = st.selectbox("状态", ["持有中", "已售出"], index=0 if card['status']=="持有中" else 1)
-                        new_sell = st.number_input("卖出价格", value=float(card['sell_price'] or 0.0), step=10.0)
-                        default_date = datetime.date.fromisoformat(card['date']) if card.get('date') else datetime.date.today()
-                        new_date = st.date_input("交易日期", value=default_date)
                         
-                        if st.form_submit_button("保存修改"):
+                        col_e1, col_e2 = st.columns(2)
+                        with col_e1:
+                            new_buy = st.number_input("修改买入价", value=float(card['buy_price']), step=10.0)
+                            new_sell = st.number_input("卖出价格", value=float(card['sell_price'] or 0.0), step=10.0)
+                        with col_e2:
+                            new_cost = st.number_input("修改杂费(邮费等)", value=float(card['costs'] or 0.0), step=5.0)
+                            default_date = datetime.date.fromisoformat(card['date']) if card.get('date') else datetime.date.today()
+                            new_date = st.date_input("交易日期", value=default_date)
+                        
+                        if st.form_submit_button("保存所有修改"):
                             supabase.table("cards").update({
-                                "status": new_status, "sell_price": new_sell, "date": str(new_date)
+                                "status": new_status, 
+                                "buy_price": new_buy,
+                                "costs": new_cost,
+                                "sell_price": new_sell, 
+                                "date": str(new_date)
                             }).eq("id", card['id']).execute()
                             st.rerun()
                 st.markdown("<hr style='border: 1px dashed #333; margin-top: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
@@ -199,7 +183,7 @@ with tabs[1]:
                 c_price = st.number_input("杂费(邮费/手续费)", min_value=0.0, step=5.0)
                 
             b_date = st.date_input("购入日期", value=datetime.date.today())
-            img = st.file_uploader("📸 上传卡片照片", type=['jpg','png','jpeg'])
+            img = st.file_uploader("📸 上传卡片照片", type=['jpg','png','jpeg', 'webp'])
             
             if st.form_submit_button("确认入库 (-¥)", use_container_width=True):
                 if not name or not img:
