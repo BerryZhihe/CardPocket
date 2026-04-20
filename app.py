@@ -10,42 +10,33 @@ st.set_page_config(page_title="球星卡小荷包", page_icon="💳", layout="wi
 
 st.markdown("""
     <style>
-    /* 强制全局暗黑背景与现代原生字体栈 */
     .stApp {
         background-color: #0E1117 !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
     }
     h1 {
-        text-align: center; 
-        color: #FF8C00 !important; 
-        font-weight: 700 !important;
-        text-shadow: 0px 2px 8px rgba(255,140,0,0.15); 
-        margin-bottom: 5px;
+        text-align: center; color: #FF8C00 !important; font-weight: 700 !important;
+        text-shadow: 0px 2px 8px rgba(255,140,0,0.15); margin-bottom: 5px;
     }
     .subtitle {
         text-align: center; color: #888888; font-size: 14px; margin-bottom: 30px; letter-spacing: 0.5px;
     }
-    /* 数据看板卡片美化 */
     [data-testid="stMetric"] {
         background: linear-gradient(145deg, #1A1C23, #121419) !important;
         border: 1px solid #2A2D35 !important; border-top: 3px solid #FF8C00 !important;
-        border-radius: 12px; padding: 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); text-align: center;
+        border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); text-align: center;
         transition: transform 0.3s ease;
     }
     [data-testid="stMetric"]:hover { transform: translateY(-4px); border-color: #FF8C00 !important; }
     [data-testid="stMetricValue"] { justify-content: center; color: #F8F9FA !important; font-size: 34px !important; font-weight: 600 !important; }
     [data-testid="stMetricLabel"] { justify-content: center; color: #A0AEC0 !important; font-size: 14px !important; }
     
-    /* 按钮美化 */
     .stButton > button {
         background: linear-gradient(90deg, #FF8C00, #FF6347) !important;
         color: white !important; border: none !important; border-radius: 8px !important;
         padding: 10px 24px !important; font-weight: 600 !important; width: 100%;
     }
     [data-testid="stForm"] { border-color: #2A2D35 !important; border-radius: 12px !important; }
-    
-    /* 隐藏 Streamlit 自带的顶部冗余空白 */
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
     </style>
     """, unsafe_allow_html=True)
@@ -60,11 +51,18 @@ def init_connection():
 supabase: Client = init_connection()
 
 # ==========================================
-# 3. 核心财务逻辑计算
+# 3. 核心财务逻辑与【高级排序】
 # ==========================================
 def get_financials():
     cards = supabase.table("cards").select("*").execute().data or []
     deposits = supabase.table("wallet_logs").select("*").execute().data or []
+    
+    # --- 新增：智能双重排序逻辑 ---
+    # 排序规则：1. 状态优先（持有中=0排前面，已售出=1排后面） 2. 购入日期从早到晚
+    cards.sort(key=lambda x: (
+        0 if x.get('status') == '持有中' else 1,
+        x.get('date', '9999-12-31') # 如果没有日期，放到最后
+    ))
     
     net_capital = sum(d['amount'] for d in deposits)
     buy_all = sum(c['buy_price'] + (c['costs'] or 0) for c in cards)
@@ -95,7 +93,7 @@ st.divider()
 tabs = st.tabs(["🖼️ 资产画廊与管理", "📝 录入新卡", "💰 资金池管理"])
 
 # ----------------------------------------
-# 页面 1: 资产画廊 (终极排版优化版)
+# 页面 1: 资产画廊 (双日期展示与编辑)
 # ----------------------------------------
 with tabs[0]:
     if not all_cards:
@@ -105,8 +103,7 @@ with tabs[0]:
         for i, card in enumerate(all_cards):
             with cols[i % 3]:
                 
-                # 【防失控的 1:1 图片展示】
-                # 加入了 max-width: 250px 和 margin: 0 auto 保证大屏不失控，小屏能自适应
+                # 完美 1:1 图片防失控展示
                 st.markdown(f"""
                     <div style="display: flex; justify-content: center; width: 100%; margin-top: 10px; margin-bottom: 12px;">
                         <div style="width: 100%; max-width: 250px; aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 16px rgba(0,0,0,0.4); border: 1px solid #333;">
@@ -115,16 +112,23 @@ with tabs[0]:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # 紧凑优美的文字排版
-                date_str = card.get('date', '未记录')
+                # --- 新增：智能双日期展示 ---
+                buy_date_str = card.get('date', '未记录')
+                sell_date_str = card.get('sell_date', '未记录')
+                
+                if card['status'] == "持有中":
+                    date_display = f"入库日: {buy_date_str}"
+                else:
+                    date_display = f"入库: {buy_date_str} | 售出: {sell_date_str}"
+                
                 st.markdown(f"""
                     <div style="text-align: center;">
                         <h4 style="color: #E0E0E0; margin: 0 0 4px 0; font-weight: 600; font-size: 16px;">{card['card_name']}</h4>
-                        <p style="color:#888; font-size: 12px; margin: 0 0 12px 0;">交易日: {date_str}</p>
+                        <p style="color:#888; font-size: 12px; margin: 0 0 12px 0;">{date_display}</p>
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # 【全新的 App 风半透明状态胶囊】替换了笨重的警告框
+                # 半透明状态胶囊
                 buy_total = card['buy_price'] + (card['costs'] or 0)
                 if card['status'] == "持有中":
                     st.markdown(f"""
@@ -139,7 +143,6 @@ with tabs[0]:
                     color = "#00FA9A" if profit >= 0 else "#FF4500"
                     bg_color = "rgba(0,250,154,0.15)" if profit >= 0 else "rgba(255,69,0,0.15)"
                     border_color = "rgba(0,250,154,0.3)" if profit >= 0 else "rgba(255,69,0,0.3)"
-                    
                     st.markdown(f"""
                         <div style="text-align: center; margin-bottom: 16px;">
                             <span style="background: {bg_color}; color: {color}; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid {border_color};">
@@ -148,7 +151,7 @@ with tabs[0]:
                         </div>
                     """, unsafe_allow_html=True)
                 
-                # 全能编辑表单
+                # --- 编辑表单升级：加入双日期修改 ---
                 with st.expander("✏️ 编辑 / 卖出"):
                     with st.form(f"edit_form_{card['id']}"):
                         new_name = st.text_input("修改名称", value=card['card_name'])
@@ -157,19 +160,29 @@ with tabs[0]:
                         with col_e1:
                             new_status = st.selectbox("状态", ["持有中", "已售出"], index=0 if card['status']=="持有中" else 1)
                             new_buy = st.number_input("买入价", value=float(card['buy_price']), step=10.0)
+                            
+                            # 获取旧日期作为默认值
+                            default_buy_date = datetime.date.fromisoformat(card['date']) if card.get('date') else datetime.date.today()
+                            new_buy_date = st.date_input("购入日期", value=default_buy_date)
                         
                         with col_e2:
                             new_cost = st.number_input("杂费(邮费等)", value=float(card['costs'] or 0.0), step=5.0)
                             new_sell = st.number_input("卖出价格", value=float(card['sell_price'] or 0.0), step=10.0)
-                        
-                        default_date = datetime.date.fromisoformat(card['date']) if card.get('date') else datetime.date.today()
-                        new_date = st.date_input("交易日期", value=default_date)
+                            
+                            # 获取旧售出日期作为默认值
+                            default_sell_date = datetime.date.fromisoformat(card['sell_date']) if card.get('sell_date') else datetime.date.today()
+                            new_sell_date = st.date_input("售出日期", value=default_sell_date)
                         
                         if st.form_submit_button("保存"):
                             update_data = {
-                                "card_name": new_name, "status": new_status, 
-                                "buy_price": new_buy, "costs": new_cost,
-                                "sell_price": new_sell, "date": str(new_date)
+                                "card_name": new_name, 
+                                "status": new_status, 
+                                "buy_price": new_buy, 
+                                "costs": new_cost,
+                                "sell_price": new_sell, 
+                                "date": str(new_buy_date),
+                                # 如果状态变为持有中，清除售出日期，保持数据干净
+                                "sell_date": str(new_sell_date) if new_status == "已售出" else None
                             }
                             supabase.table("cards").update(update_data).eq("id", card['id']).execute()
                             st.rerun()
