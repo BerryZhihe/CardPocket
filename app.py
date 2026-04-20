@@ -4,23 +4,24 @@ import datetime
 import time
 
 # ==========================================
-# 1. 页面设置与【高级暗黑+悬浮卡片】主题美化
+# 1. 页面设置与【现代金融风】主题美化
 # ==========================================
 st.set_page_config(page_title="球星卡小荷包", page_icon="💳", layout="wide")
 
-# 强制注入全局 CSS，覆盖所有默认样式
+# 强制注入全局 CSS，优化字体与排版细节
 st.markdown("""
     <style>
-    /* 强制全局暗黑背景 */
+    /* 强制全局暗黑背景与现代原生字体栈 */
     .stApp {
         background-color: #0E1117 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif !important;
     }
-    /* 标题特效 */
+    /* 标题特效收敛，更加沉稳高级 */
     h1 {
         text-align: center; 
         color: #FF8C00 !important; 
-        font-weight: 800 !important;
-        text-shadow: 0px 4px 10px rgba(255,140,0,0.3);
+        font-weight: 700 !important;
+        text-shadow: 0px 2px 8px rgba(255,140,0,0.15);
         margin-bottom: 5px;
     }
     /* 副标题居中 */
@@ -29,62 +30,71 @@ st.markdown("""
         color: #888888;
         font-size: 14px;
         margin-bottom: 30px;
+        letter-spacing: 0.5px;
     }
-    /* 数据看板卡片 (高级渐变与阴影) */
+    /* 数据看板卡片 (精细渐变与柔和阴影) */
     [data-testid="stMetric"] {
         background: linear-gradient(145deg, #1A1C23, #121419) !important;
-        border: 1px solid #333 !important;
+        border: 1px solid #2A2D35 !important;
         border-top: 3px solid #FF8C00 !important;
         border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         text-align: center;
-        transition: transform 0.3s ease;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     [data-testid="stMetric"]:hover {
-        transform: translateY(-5px);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(255, 140, 0, 0.15);
         border-color: #FF8C00 !important;
     }
-    /* 数据文字颜色 */
+    /* 核心修改：数据文字圆润化、清晰化 */
     [data-testid="stMetricValue"] { 
         justify-content: center; 
-        color: #FFFFFF !important; 
-        font-size: 32px !important;
-        font-family: 'Courier New', Courier, monospace;
+        color: #F8F9FA !important; 
+        font-size: 34px !important;
+        font-weight: 600 !important;
+        /* 移除难看的等宽字体，使用圆润的系统字体 */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        letter-spacing: 0.5px;
     }
     [data-testid="stMetricLabel"] { 
         justify-content: center; 
-        color: #AAAAAA !important; 
-        font-size: 15px !important;
+        color: #A0AEC0 !important; 
+        font-size: 14px !important;
+        font-weight: 500 !important;
     }
     [data-testid="stMetricDelta"] {
         justify-content: center; 
     }
-    /* 按钮高级动效 (渐变橙色) */
+    /* 按钮高级动效 */
     .stButton > button {
         background: linear-gradient(90deg, #FF8C00, #FF6347) !important;
         color: white !important;
         border: none !important;
         border-radius: 8px !important;
         padding: 10px 24px !important;
-        font-weight: bold !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.5px !important;
         transition: all 0.3s ease !important;
         width: 100%;
     }
     .stButton > button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4) !important;
+        box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3) !important;
     }
-    /* 卡片标题居中 */
+    /* 卡片标题居中与加粗 */
     .card-title {
         text-align: center;
         color: #E0E0E0;
         margin-top: 10px;
         margin-bottom: 5px;
+        font-weight: 600;
     }
-    /* 表单边框淡化 */
+    /* 表单边框柔和化 */
     [data-testid="stForm"] {
-        border-color: #333 !important;
+        border-color: #2A2D35 !important;
+        border-radius: 12px !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -105,18 +115,14 @@ def get_financials():
     cards = supabase.table("cards").select("*").execute().data or []
     deposits = supabase.table("wallet_logs").select("*").execute().data or []
     
-    # 累计净投入 = 所有的充值(+) + 所有的提现(-)
     net_capital = sum(d['amount'] for d in deposits)
     
-    # 现金余额 = 净投入 - 所有买卡花出去的钱 + 卖卡收回来的钱
     buy_all = sum(c['buy_price'] + (c['costs'] or 0) for c in cards)
     sell_all = sum(c['sell_price'] or 0 for c in cards if c['status'] == '已售出')
     cash_balance = net_capital - buy_all + sell_all
     
-    # 在手卡片价值 (仅算没卖的卡)
     inventory_value = sum(c['buy_price'] + (c['costs'] or 0) for c in cards if c['status'] == '持有中')
     
-    # 钱包总余额 = 现金余额 + 在手卡片价值
     total_balance = cash_balance + inventory_value
     
     return net_capital, cash_balance, inventory_value, total_balance, cards
@@ -159,10 +165,10 @@ with tabs[0]:
                 buy_total = card['buy_price'] + (card['costs'] or 0)
                 
                 if card['status'] == "持有中":
-                    st.warning(f"持有中 · 成本: ¥{buy_total}")
+                    st.warning(f"持有中 · 成本: ¥{buy_total:,.2f}")
                 else:
                     profit = (card['sell_price'] or 0) - buy_total
-                    st.success(f"已售出 · 盈亏: ¥{profit}")
+                    st.success(f"已售出 · 盈亏: ¥{profit:,.2f}")
                 
                 with st.expander("✏️ 修改状态 / 卖出"):
                     with st.form(f"edit_{card['id']}"):
